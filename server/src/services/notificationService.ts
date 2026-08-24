@@ -145,7 +145,7 @@ export const buildRiskAlertMessage = ({
     resource ? `Tài nguyên: ${resource}` : null,
     stage ? `Công đoạn bị ảnh hưởng: ${stage}` : null,
     '',
-    isCritical ? 'Đơn hàng cần được ưu tiên kiểm tra và xử lý.' : 'Vui lòng kiểm tra trên hệ thống GomFlow.'
+    isCritical ? 'Đơn hàng cần được ưu tiên kiểm tra và xử lý.' : 'Vui lòng kiểm tra trên hệ thống CeramiOps.'
   ])
 
   return lines.join('\n')

@@ -63,7 +63,7 @@ const LoginPage = () => {
         <section className='hidden lg:block'>
           <p className='text-sm font-semibold uppercase tracking-[0.24em] text-cyan-300'>Production Control</p>
           <h1 className='mt-5 max-w-2xl text-5xl font-bold leading-tight'>
-            GomFlow AI vận hành sản xuất trong một màn hình gọn gàng.
+            CeramiOps AI vận hành sản xuất trong một màn hình gọn gàng.
           </h1>
           <p className='mt-5 max-w-xl text-base leading-7 text-slate-300'>
             Demo đăng nhập đã nối với backend, tự refresh access token khi hết hạn và chuyển hướng về dashboard sau khi

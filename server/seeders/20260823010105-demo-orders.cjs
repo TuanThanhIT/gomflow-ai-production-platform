@@ -6,7 +6,7 @@ const getSeedContext = async (queryInterface, transaction) => {
     { transaction }
   )
   const [users] = await queryInterface.sequelize.query(
-    "SELECT id, email FROM users WHERE email IN ('manager@gomflow.local', 'operator@gomflow.local')",
+    "SELECT id, email FROM users WHERE email IN ('manager@ceramiops.local', 'operator@ceramiops.local')",
     { transaction }
   )
 
@@ -27,8 +27,8 @@ module.exports = {
     await queryInterface.sequelize.transaction(async (transaction) => {
       const now = new Date()
       const { templates, users } = await getSeedContext(queryInterface, transaction)
-      const managerId = users['manager@gomflow.local']
-      const operatorId = users['operator@gomflow.local']
+      const managerId = users['manager@ceramiops.local']
+      const operatorId = users['operator@ceramiops.local']
 
       await queryInterface.bulkInsert(
         'orders',

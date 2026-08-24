@@ -5,7 +5,7 @@ dotenv.config()
 const baseConfig = {
   username: process.env.DB_USER || 'root',
   password: process.env.DB_PASSWORD || '123456789',
-  database: process.env.DB_NAME || 'gom_flow_db',
+  database: process.env.DB_NAME || 'cerami_ops_db',
   host: process.env.DB_HOST || '127.0.0.1',
   port: Number(process.env.DB_PORT || 3306),
   dialect: 'mysql',

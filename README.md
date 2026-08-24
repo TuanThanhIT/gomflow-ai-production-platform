@@ -1,6 +1,6 @@
-# GomFlow AI Production Platform
+# CeramiOps AI Production Platform
 
-GomFlow AI Production Platform là hệ thống quản lý quy trình sản xuất dành cho xưởng gốm hoặc các mô hình sản xuất theo công đoạn. Dự án hỗ trợ theo dõi đơn hàng, mẫu quy trình, tài nguyên sản xuất, sự cố công đoạn, dashboard vận hành và một số tính năng AI để phân tích đơn hàng/sự cố.
+CeramiOps AI Production Platform là hệ thống quản lý quy trình sản xuất dành cho xưởng gốm hoặc các mô hình sản xuất theo công đoạn. Dự án hỗ trợ theo dõi đơn hàng, mẫu quy trình, tài nguyên sản xuất, sự cố công đoạn, dashboard vận hành và một số tính năng AI để phân tích đơn hàng/sự cố.
 
 ## 1. Bài Toán
 
@@ -12,7 +12,7 @@ Trong quy trình sản xuất gốm, mỗi đơn hàng thường đi qua nhiều
 - Quy trình sản xuất thay đổi theo từng loại sản phẩm nhưng thiếu nơi quản lý tập trung.
 - Người quản lý thiếu dashboard để nhìn nhanh tình trạng vận hành.
 
-GomFlow giải quyết bài toán này bằng một nền tảng web tập trung, cho phép quản lý vòng đời đơn hàng, mẫu quy trình, tài nguyên, sự cố và thông báo realtime.
+CeramiOps giải quyết bài toán này bằng một nền tảng web tập trung, cho phép quản lý vòng đời đơn hàng, mẫu quy trình, tài nguyên, sự cố và thông báo realtime.
 
 ## 2. Tính Năng Chính
 
@@ -183,7 +183,7 @@ docker compose down -v
 Tạo database MySQL:
 
 ```sql
-CREATE DATABASE gom_flow_db CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
+CREATE DATABASE cerami_ops_db CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
 ```
 
 Tạo file `server/.env`:
@@ -193,7 +193,7 @@ PORT=3001
 HOST=0.0.0.0
 DB_HOST=localhost
 DB_PORT=3306
-DB_NAME=gom_flow_db
+DB_NAME=cerami_ops_db
 DB_USER=root
 DB_PASSWORD=your_mysql_password
 
@@ -277,24 +277,24 @@ npm run seed:undo        # Rollback seed gần nhất
 
 ## 9. Biến Môi Trường Quan Trọng
 
-| Biến | Mô tả |
-| --- | --- |
-| `PORT` | Port chạy API server |
-| `HOST` | Host bind API server, nên là `0.0.0.0` khi chạy Docker |
-| `DB_HOST` | Host MySQL |
-| `DB_PORT` | Port MySQL |
-| `DB_NAME` | Tên database |
-| `DB_USER` | User database |
-| `DB_PASSWORD` | Password database |
-| `CLIENT_URL` | Origin frontend được phép dùng cookie/auth |
-| `CORS_ORIGIN` | Danh sách origin được CORS cho phép |
-| `JWT_ACCESS_SECRET` | Secret ký access token |
-| `JWT_REFRESH_SECRET` | Secret ký refresh token |
-| `GEMINI_API_KEY` | API key cho tính năng AI |
-| `TELEGRAM_BOT_TOKEN` | Bot token Telegram, tùy chọn |
-| `TELEGRAM_CHAT_ID` | Chat ID Telegram, tùy chọn |
-| `VITE_API_URL` | API URL được build vào client |
-| `VITE_SOCKET_URL` | Socket URL được build vào client |
+| Biến                 | Mô tả                                                  |
+| -------------------- | ------------------------------------------------------ |
+| `PORT`               | Port chạy API server                                   |
+| `HOST`               | Host bind API server, nên là `0.0.0.0` khi chạy Docker |
+| `DB_HOST`            | Host MySQL                                             |
+| `DB_PORT`            | Port MySQL                                             |
+| `DB_NAME`            | Tên database                                           |
+| `DB_USER`            | User database                                          |
+| `DB_PASSWORD`        | Password database                                      |
+| `CLIENT_URL`         | Origin frontend được phép dùng cookie/auth             |
+| `CORS_ORIGIN`        | Danh sách origin được CORS cho phép                    |
+| `JWT_ACCESS_SECRET`  | Secret ký access token                                 |
+| `JWT_REFRESH_SECRET` | Secret ký refresh token                                |
+| `GEMINI_API_KEY`     | API key cho tính năng AI                               |
+| `TELEGRAM_BOT_TOKEN` | Bot token Telegram, tùy chọn                           |
+| `TELEGRAM_CHAT_ID`   | Chat ID Telegram, tùy chọn                             |
+| `VITE_API_URL`       | API URL được build vào client                          |
+| `VITE_SOCKET_URL`    | Socket URL được build vào client                       |
 
 ## 10. API Chính
 

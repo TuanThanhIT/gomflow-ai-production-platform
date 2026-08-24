@@ -245,7 +245,7 @@ const applyDeterministicResourceMatch = (
 }
 
 const buildSystemInstruction =
-  () => `You are one AI incident analysis component for GomFlow, a ceramic production management system.
+  () => `You are one AI incident analysis component for CeramiOps, a ceramic production management system.
 
 ROLE
 - Extract an incident draft and choose the most suitable resource in the same response.

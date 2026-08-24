@@ -12,11 +12,11 @@ const navItems = [
 const Sidebar = ({ onNavigate }: { onNavigate?: () => void }) => (
   <div className='flex h-full flex-col'>
     <div className='flex h-20 items-center gap-3 border-b border-slate-200 px-5'>
-      <div className='flex h-11 w-11 items-center justify-center rounded-xl bg-cyan-500 text-white shadow-sm shadow-cyan-100'>
-        <Factory className='h-6 w-6' />
+      <div className='flex h-11 w-11 items-center justify-center rounded-xl bg-cyan-200 text-white shadow-sm shadow-cyan-100'>
+        <img src='./logo.webp' className='h-6 w-6' />
       </div>
       <div>
-        <p className='text-base font-extrabold tracking-tight text-slate-800'>GỐM THỦ ĐỨC</p>
+        <p className='text-base font-extrabold tracking-tight text-slate-800'>CeramiOps</p>
         <p className='text-xs font-medium text-slate-500'>Production AI</p>
       </div>
     </div>

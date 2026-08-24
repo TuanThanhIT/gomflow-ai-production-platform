@@ -361,7 +361,7 @@ const hasEnoughOrderData = (draft: AIOrderDraft) => {
 }
 
 const buildSystemInstruction =
-  () => `You are one AI analysis component for GomFlow, a ceramic production management system.
+  () => `You are one AI analysis component for CeramiOps, a ceramic production management system.
 
 ROLE
 - Extract an order draft and choose the most suitable production process template in the same response.

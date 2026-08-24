@@ -12,8 +12,8 @@ module.exports = {
         'users',
         [
           {
-            full_name: 'GomFlow Administrator',
-            email: 'admin@gomflow.local',
+            full_name: 'Administrator',
+            email: 'admin@ceramiops.local',
             password_hash: passwordHash,
             role: 'ADMIN',
             is_active: true,
@@ -23,7 +23,7 @@ module.exports = {
           },
           {
             full_name: 'Production Manager',
-            email: 'manager@gomflow.local',
+            email: 'manager@ceramiops.local',
             password_hash: passwordHash,
             role: 'MANAGER',
             is_active: true,
@@ -33,7 +33,7 @@ module.exports = {
           },
           {
             full_name: 'Production Operator',
-            email: 'operator@gomflow.local',
+            email: 'operator@ceramiops.local',
             password_hash: passwordHash,
             role: 'OPERATOR',
             is_active: true,
@@ -49,7 +49,7 @@ module.exports = {
 
   async down(queryInterface) {
     await queryInterface.bulkDelete('users', {
-      email: ['admin@gomflow.local', 'manager@gomflow.local', 'operator@gomflow.local']
+      email: ['admin@ceramiops.local', 'manager@ceramiops.local', 'operator@ceramiops.local']
     })
   }
 }

@@ -62,7 +62,7 @@ const Header = ({ onOpenSidebar }: { onOpenSidebar: () => void }) => {
   const pageMeta = useMemo(
     () =>
       pageTitles.find((item) => item.match(location.pathname)) ?? {
-        title: 'GOMFLOW',
+        title: 'CERAMIOPS',
         subtitle: 'Quản lý vận hành sản xuất.'
       },
     [location.pathname]

@@ -57,7 +57,7 @@ module.exports = {
       )
       const [resources] = await queryInterface.sequelize.query('SELECT id, code FROM resources', { transaction })
       const [users] = await queryInterface.sequelize.query(
-        "SELECT id, email FROM users WHERE email IN ('manager@gomflow.local', 'operator@gomflow.local')",
+        "SELECT id, email FROM users WHERE email IN ('manager@ceramiops.local', 'operator@ceramiops.local')",
         { transaction }
       )
 
@@ -78,8 +78,8 @@ module.exports = {
             order_id: order.id,
             template_step_id: step.id,
             assigned_resource_id: resourceCode ? resourcesByCode[resourceCode]?.id : null,
-            started_by_user_id: started ? usersByEmail['operator@gomflow.local']?.id : null,
-            completed_by_user_id: completed ? usersByEmail['operator@gomflow.local']?.id : null,
+            started_by_user_id: started ? usersByEmail['operator@ceramiops.local']?.id : null,
+            completed_by_user_id: completed ? usersByEmail['operator@ceramiops.local']?.id : null,
             code: step.code,
             name: step.name,
             step_order: step.step_order,
@@ -120,7 +120,7 @@ module.exports = {
         await queryInterface.bulkInsert(
           'activity_logs',
           insertedStages.map((stage) => ({
-            actor_user_id: usersByEmail['operator@gomflow.local']?.id ?? usersByEmail['manager@gomflow.local']?.id,
+            actor_user_id: usersByEmail['operator@ceramiops.local']?.id ?? usersByEmail['manager@ceramiops.local']?.id,
             order_id: stage.order_id,
             order_stage_id: stage.id,
             incident_id: null,
