@@ -1,5 +1,5 @@
 ﻿import Joi from 'joi'
-import { ORDER_PRIORITY, ORDER_STATUS, RISK_LEVEL } from '../constants/databaseConstants.js'
+import { ORDER_PRIORITY, ORDER_STATUS, RISK_LEVEL } from '../constants/orderConstants.js'
 import { idParams } from './commons/numberField.js'
 
 const positiveInteger = (name: string) =>

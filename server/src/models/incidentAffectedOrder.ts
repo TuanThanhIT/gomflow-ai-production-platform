@@ -1,6 +1,6 @@
 import { DataTypes } from 'sequelize'
 import sequelize from '../config/db.js'
-import { RISK_LEVEL } from '../constants/databaseConstants.js'
+import { RISK_LEVEL } from '../constants/orderConstants.js'
 
 const IncidentAffectedOrder = sequelize.define(
   'IncidentAffectedOrder',

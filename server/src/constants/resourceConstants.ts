@@ -1,0 +1,17 @@
+export const RESOURCE_TYPE = Object.freeze({
+  KILN: 'KILN',
+  DRYER: 'DRYER',
+  FORMING: 'FORMING',
+  DECORATION: 'DECORATION',
+  GLAZING: 'GLAZING',
+  QC: 'QC',
+  PACKAGING: 'PACKAGING',
+  OTHER: 'OTHER'
+})
+
+export const RESOURCE_STATUS = Object.freeze({
+  AVAILABLE: 'AVAILABLE',
+  IN_USE: 'IN_USE',
+  MAINTENANCE: 'MAINTENANCE',
+  BROKEN: 'BROKEN'
+})

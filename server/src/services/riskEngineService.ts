@@ -1,12 +1,8 @@
 import type { Model, Transaction } from 'sequelize'
 import { Op } from 'sequelize'
-import {
-  ACTIVITY_EVENT_TYPE,
-  INCIDENT_STATUS,
-  ORDER_STATUS,
-  RISK_LEVEL,
-  type INCIDENT_SEVERITY
-} from '../constants/databaseConstants.js'
+import { ACTIVITY_EVENT_TYPE } from '../constants/activityConstants.js'
+import { INCIDENT_STATUS, type INCIDENT_SEVERITY } from '../constants/incidentConstants.js'
+import { ORDER_STATUS, RISK_LEVEL } from '../constants/orderConstants.js'
 import { SOCKET_EVENTS } from '../constants/socketEvents.js'
 import { ActivityLog, Incident, IncidentAffectedOrder, Order } from '../models/index.js'
 import {

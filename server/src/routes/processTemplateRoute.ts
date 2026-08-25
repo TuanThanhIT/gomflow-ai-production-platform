@@ -1,6 +1,6 @@
 import type { Express } from 'express'
 import express from 'express'
-import { USER_ROLE } from '../constants/databaseConstants.js'
+import { USER_ROLE } from '../constants/userConstants.js'
 import processTemplateController from '../controllers/processTemplateController.js'
 import auth from '../middlewares/auth.js'
 import authorize from '../middlewares/authorize.js'
@@ -19,15 +19,19 @@ const initProcessTemplateRoute = (app: Express) => {
   processTemplateRoute.get(
     '/',
     auth,
+    authorize(USER_ROLE.MANAGER, USER_ROLE.OPERATOR),
     validate(getProcessTemplatesSchema),
     processTemplateController.getProcessTemplatesController
   )
+
   processTemplateRoute.get(
     '/:processTemplateId',
     auth,
+    authorize(USER_ROLE.MANAGER, USER_ROLE.OPERATOR),
     validate(getProcessTemplateDetailSchema),
     processTemplateController.getProcessTemplateDetailController
   )
+
   processTemplateRoute.post(
     '/',
     auth,
@@ -35,6 +39,7 @@ const initProcessTemplateRoute = (app: Express) => {
     validate(createProcessTemplateSchema),
     processTemplateController.createProcessTemplateController
   )
+
   processTemplateRoute.patch(
     '/:processTemplateId',
     auth,
@@ -42,6 +47,7 @@ const initProcessTemplateRoute = (app: Express) => {
     validate(updateProcessTemplateSchema),
     processTemplateController.updateProcessTemplateController
   )
+
   processTemplateRoute.delete(
     '/:processTemplateId',
     auth,

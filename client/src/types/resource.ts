@@ -27,6 +27,15 @@ export interface GetResourcesParams {
   status?: ResourceStatus | ''
   active?: 'active' | 'inactive' | 'all'
   search?: string
+  page?: number
+  limit?: number
+}
+
+export interface ResourcesPagination {
+  page: number
+  limit: number
+  totalItems: number
+  totalPages: number
 }
 
 export interface CreateResourcePayload {
@@ -56,7 +65,10 @@ export interface AvailableResourcesForStage {
   resources: Resource[]
 }
 
-export type ResourcesResponse = ApiResponse<Resource[]>
+export type ResourcesResponse = ApiResponse<{
+  items: Resource[]
+  pagination: ResourcesPagination
+}>
 export type ResourceResponse = ApiResponse<Resource>
 export type DeleteResourceResponse = ApiResponse<DeleteResourceResult>
 export type AvailableResourcesForStageResponse = ApiResponse<AvailableResourcesForStage>

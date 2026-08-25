@@ -1,6 +1,6 @@
 import { DataTypes } from 'sequelize'
 import sequelize from '../config/db.js'
-import { ORDER_STAGE_STATUS } from '../constants/databaseConstants.js'
+import { ORDER_STAGE_STATUS } from '../constants/orderStageConstants.js'
 
 const OrderStage = sequelize.define(
   'OrderStage',

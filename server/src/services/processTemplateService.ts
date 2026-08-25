@@ -1,7 +1,7 @@
 import type { Transaction, WhereOptions } from 'sequelize'
 import { Op, UniqueConstraintError } from 'sequelize'
 import sequelize from '../config/db.js'
-import { RESOURCE_TYPE } from '../constants/databaseConstants.js'
+import { RESOURCE_TYPE } from '../constants/resourceConstants.js'
 import BadRequestError from '../errors/BadRequestError.js'
 import ConflictError from '../errors/ConflictError.js'
 import NotFoundError from '../errors/NotFoundError.js'

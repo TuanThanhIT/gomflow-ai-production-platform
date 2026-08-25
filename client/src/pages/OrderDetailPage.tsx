@@ -870,7 +870,7 @@ const OrderDetailPage = () => {
     setRawDescription('')
     setAiIncidentWarnings([])
     setAiRecommendedResource(null)
-    void dispatch(getResources())
+    void dispatch(getResources({ active: 'active', limit: 100 }))
   }
 
   const handleCloseReportIncident = () => {

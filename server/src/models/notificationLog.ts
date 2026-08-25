@@ -1,6 +1,6 @@
 import { DataTypes } from 'sequelize'
 import sequelize from '../config/db.js'
-import { NOTIFICATION_CHANNEL, NOTIFICATION_STATUS, NOTIFICATION_TYPE } from '../constants/databaseConstants.js'
+import { NOTIFICATION_CHANNEL, NOTIFICATION_STATUS, NOTIFICATION_TYPE } from '../constants/notificationConstants.js'
 
 const NotificationLog = sequelize.define(
   'NotificationLog',

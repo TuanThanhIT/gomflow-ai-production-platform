@@ -1,4 +1,4 @@
-import { AlertTriangle, Boxes, ClipboardList, Factory, Home } from 'lucide-react'
+﻿import { AlertTriangle, Boxes, ClipboardList, Factory, History, Home } from 'lucide-react'
 import { NavLink } from 'react-router-dom'
 
 const navItems = [
@@ -6,6 +6,7 @@ const navItems = [
   { icon: ClipboardList, label: 'Đơn hàng', to: '/orders' },
   { icon: Boxes, label: 'Tài nguyên', to: '/resources' },
   { icon: AlertTriangle, label: 'Sự cố', to: '/incidents' },
+  { icon: History, label: 'Nhật ký hoạt động', to: '/activity-logs' },
   { icon: Factory, label: 'Quy trình', to: '/process-templates' }
 ]
 

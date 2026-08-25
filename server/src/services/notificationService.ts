@@ -1,13 +1,8 @@
 import type { Model, Transaction } from 'sequelize'
 import { Op } from 'sequelize'
-import {
-  INCIDENT_STATUS,
-  NOTIFICATION_CHANNEL,
-  NOTIFICATION_STATUS,
-  NOTIFICATION_TYPE,
-  ORDER_STATUS,
-  RISK_LEVEL
-} from '../constants/databaseConstants.js'
+import { INCIDENT_SEVERITY, INCIDENT_STATUS } from '../constants/incidentConstants.js'
+import { NOTIFICATION_CHANNEL, NOTIFICATION_STATUS, NOTIFICATION_TYPE } from '../constants/notificationConstants.js'
+import { ORDER_STATUS, RISK_LEVEL } from '../constants/orderConstants.js'
 import { Incident, IncidentAffectedOrder, NotificationLog, Order, OrderStage, Resource } from '../models/index.js'
 import { emitNotificationSent } from './socketService.js'
 import telegramService from './telegramService.js'
@@ -38,6 +33,13 @@ type PlainNotificationLog = {
   message: string
   channel: string
   notificationType: string
+  payload?: {
+    telegramCallback?: {
+      action?: string
+      orderStageId?: string | number
+      incidentId?: string | number
+    }
+  } | null
   order?: {
     id: string | number
     code: string
@@ -201,11 +203,162 @@ export const buildStageCompletedMessage = ({
   return lines.join('\n')
 }
 
+export const buildActiveStageMessage = ({
+  activeStage,
+  order,
+  progressPercent
+}: {
+  order: PlainOrderForStageCompleted
+  activeStage: { id: string | number; code: string; name: string }
+  progressPercent: number
+}) => {
+  const progress = formatProgressPercent(progressPercent)
+  const lines = compactLines([
+    '🟡 CÔNG ĐOẠN ĐANG THỰC HIỆN',
+    '',
+    'Đơn:',
+    order.code,
+    order.customerName ? `Khách hàng: ${order.customerName}` : null,
+    order.productName ? `Sản phẩm: ${order.productName}` : null,
+    '',
+    'Công đoạn:',
+    activeStage.name,
+    '',
+    'Trạng thái:',
+    'Đang thực hiện',
+    '',
+    progress ? 'Tiến độ:' : null,
+    progress
+  ])
+
+  return lines.join('\n')
+}
+
+export const buildStageReadyToResumeMessage = ({
+  order,
+  resource,
+  stage
+}: {
+  order?: PlainOrderForAlert | null
+  resource?: { code: string; name: string } | null
+  stage: { code: string; name: string; status: string }
+}) => {
+  const progress = order ? formatProgressPercent(order.progressPercent) : null
+  const lines = compactLines([
+    'CÔNG ĐOẠN SẴN SÀNG TIẾP TỤC',
+    '',
+    order ? `Đơn hàng: ${order.code}` : null,
+    order?.productName ? `Sản phẩm: ${order.productName}` : null,
+    progress ? `Tiến độ: ${progress}` : null,
+    '',
+    `Công đoạn: ${stage.name}`,
+    `Trạng thái hiện tại: ${stage.status}`,
+    resource ? `Tài nguyên: ${resource.name} (${resource.code})` : null,
+    '',
+    'Bấm Tiếp tục công đoạn để chuyển công đoạn về trạng thái đang thực hiện.'
+  ])
+
+  return lines.join('\n')
+}
+
+export const buildIncidentAlertMessage = ({
+  incident,
+  order,
+  resource,
+  stage
+}: {
+  incident: {
+    code: string
+    type: string
+    severity: string
+    rawDescription: string
+    estimatedDelayMinutes?: number | null
+  }
+  order?: PlainOrderForAlert | null
+  resource?: { code: string; name: string } | null
+  stage?: { code: string; name: string; status: string } | null
+}) => {
+  const lines = compactLines([
+    incident.severity === INCIDENT_SEVERITY.CRITICAL ? 'CẢNH BÁO SỰ CỐ NGHIÊM TRỌNG' : 'CẢNH BÁO SỰ CỐ SẢN XUẤT',
+    '',
+    order ? `Đơn hàng: ${order.code}` : null,
+    order?.customerName ? `Khách hàng: ${order.customerName}` : null,
+    order?.productName ? `Sản phẩm: ${order.productName}` : null,
+    '',
+    `Sự cố: ${incident.code}`,
+    `Mức độ: ${severityLabel[incident.severity] ?? incident.severity}`,
+    `Loại: ${incident.type}`,
+    resource ? `Tài nguyên: ${resource.name} (${resource.code})` : null,
+    stage ? `Công đoạn: ${stage.name}` : null,
+    stage ? `Trạng thái công đoạn: ${stage.status}` : null,
+    incident.estimatedDelayMinutes ? `Ước tính trễ: ${incident.estimatedDelayMinutes} phút` : null,
+    '',
+    incident.rawDescription,
+    '',
+    'Vui lòng kiểm tra và xử lý trên GomFlow.'
+  ])
+
+  return lines.join('\n')
+}
+
+export const buildIncidentResolvedMessage = ({
+  incident,
+  order,
+  resource,
+  stage
+}: {
+  incident: {
+    code: string
+    type: string
+    severity: string
+    resolutionNote?: string | null
+  }
+  order?: PlainOrderForAlert | null
+  resource?: { code: string; name: string } | null
+  stage?: { code: string; name: string; status: string } | null
+}) => {
+  const lines = compactLines([
+    'ĐÃ GIẢI QUYẾT SỰ CỐ',
+    '',
+    order ? `Đơn hàng: ${order.code}` : null,
+    order?.productName ? `Sản phẩm: ${order.productName}` : null,
+    '',
+    `Sự cố: ${incident.code}`,
+    `Mức độ: ${severityLabel[incident.severity] ?? incident.severity}`,
+    resource ? `Tài nguyên: ${resource.name} (${resource.code})` : null,
+    stage ? `Công đoạn: ${stage.name}` : null,
+    stage ? `Trạng thái công đoạn: ${stage.status}` : null,
+    incident.resolutionNote ? `Ghi chú xử lý: ${incident.resolutionNote}` : null,
+    '',
+    stage?.status === 'BLOCKED'
+      ? 'Công đoạn đã sẵn sàng để tiếp tục khi điều kiện sản xuất cho phép.'
+      : 'Sự cố đã được ghi nhận là đã xử lý.'
+  ])
+
+  return lines.join('\n')
+}
+
 const loadOrderForRiskAlert = async (orderId: string | number, transaction: Transaction) => {
   return Order.findByPk(orderId, {
     attributes: ['id', 'code', 'customerName', 'productName', 'progressPercent'],
     transaction
   })
+}
+
+const loadOrderForStageNotification = async (order: PlainOrderForStageCompleted, transaction: Transaction) => {
+  if (order.customerName && order.productName && order.aiAnalysis !== undefined) return order
+
+  const hydratedOrder = await Order.findByPk(order.id, {
+    attributes: ['id', 'code', 'customerName', 'productName', 'progressPercent', 'aiAnalysis'],
+    transaction
+  })
+
+  if (!hydratedOrder) return order
+
+  return {
+    ...getPlain<PlainOrderForStageCompleted>(hydratedOrder),
+    progressPercent: order.progressPercent
+  }
 }
 
 const loadIncidentsForRiskAlert = async (
@@ -350,6 +503,300 @@ export const createMissingRiskAlertNotificationsForActiveOrder = async (input: A
   })
 }
 
+export const createActiveStageNotificationLog = async ({
+  activeStage,
+  order,
+  progressPercent,
+  transaction
+}: {
+  order: PlainOrderForStageCompleted
+  activeStage: { id: string | number; code: string; name: string }
+  progressPercent: number
+  transaction: Transaction
+}) => {
+  const existingNotifications = await NotificationLog.findAll({
+    where: {
+      orderId: order.id,
+      notificationType: NOTIFICATION_TYPE.PROGRESS_UPDATE
+    },
+    attributes: ['id', 'payload'],
+    transaction
+  })
+
+  const existingNotification = existingNotifications.find((notification) => {
+    const payload = notification.get('payload') as { orderStageId?: string | number; action?: string } | null
+    return payload?.action === 'complete_stage' && String(payload?.orderStageId ?? '') === String(activeStage.id)
+  })
+
+  if (existingNotification) return []
+
+  const notificationOrder = await loadOrderForStageNotification(order, transaction)
+
+  const payload = {
+    trigger: 'ORDER_STAGE_IN_PROGRESS',
+    action: 'complete_stage',
+    orderId: notificationOrder.id,
+    orderCode: notificationOrder.code,
+    customerName: notificationOrder.customerName ?? null,
+    productName: notificationOrder.productName ?? null,
+    orderStageId: activeStage.id,
+    stageCode: activeStage.code,
+    stageName: activeStage.name,
+    progressPercent,
+    telegramCallback: {
+      action: 'complete_stage',
+      orderStageId: activeStage.id
+    }
+  }
+
+  const notification = await NotificationLog.create(
+    {
+      orderId: notificationOrder.id,
+      incidentId: null,
+      channel: NOTIFICATION_CHANNEL.TELEGRAM,
+      notificationType: NOTIFICATION_TYPE.PROGRESS_UPDATE,
+      status: NOTIFICATION_STATUS.PENDING,
+      recipient: process.env.TELEGRAM_CHAT_ID ?? null,
+      message: buildActiveStageMessage({
+        activeStage,
+        order: notificationOrder,
+        progressPercent
+      }),
+      payload,
+      errorMessage: null,
+      sentAt: null
+    },
+    { transaction }
+  )
+
+  return [notification.get('id') as string | number]
+}
+
+export const createIncidentAlertNotificationLog = async ({
+  incident,
+  orderId,
+  resource,
+  stage,
+  transaction
+}: {
+  incident: {
+    id: string | number
+    code: string
+    type: string
+    severity: string
+    rawDescription: string
+    estimatedDelayMinutes?: number | null
+  }
+  orderId?: string | number | null
+  resource?: { id?: string | number; code: string; name: string } | null
+  stage?: { id?: string | number; code: string; name: string; status: string } | null
+  transaction: Transaction
+}) => {
+  const existingNotifications = await NotificationLog.findAll({
+    where: {
+      incidentId: incident.id,
+      notificationType: NOTIFICATION_TYPE.INCIDENT_ALERT
+    },
+    attributes: ['id', 'payload'],
+    transaction
+  })
+
+  const existingNotification = existingNotifications.find((notification) => {
+    const payload = notification.get('payload') as { trigger?: string } | null
+    return payload?.trigger === 'INCIDENT_CREATED'
+  })
+
+  if (existingNotification) return []
+
+  const order = orderId ? await loadOrderForRiskAlert(orderId, transaction) : null
+  const plainOrder = order ? getPlain<PlainOrderForAlert>(order) : null
+  const payload = {
+    trigger: 'INCIDENT_CREATED',
+    incidentId: incident.id,
+    incidentCode: incident.code,
+    severity: incident.severity,
+    type: incident.type,
+    orderId: plainOrder?.id ?? orderId ?? null,
+    orderCode: plainOrder?.code ?? null,
+    orderStageId: stage?.id ?? null,
+    stageCode: stage?.code ?? null,
+    resourceId: resource?.id ?? null,
+    resourceCode: resource?.code ?? null,
+    telegramCallback: {
+      action: 'resolve_incident',
+      incidentId: incident.id
+    }
+  }
+
+  const notification = await NotificationLog.create(
+    {
+      orderId: plainOrder?.id ?? orderId ?? null,
+      incidentId: incident.id,
+      channel: NOTIFICATION_CHANNEL.TELEGRAM,
+      notificationType: NOTIFICATION_TYPE.INCIDENT_ALERT,
+      status: NOTIFICATION_STATUS.PENDING,
+      recipient: process.env.TELEGRAM_CHAT_ID ?? null,
+      message: buildIncidentAlertMessage({
+        incident,
+        order: plainOrder,
+        resource,
+        stage
+      }),
+      payload,
+      errorMessage: null,
+      sentAt: null
+    },
+    { transaction }
+  )
+
+  return [notification.get('id') as string | number]
+}
+
+export const createIncidentResolvedNotificationLog = async ({
+  incident,
+  orderId,
+  resource,
+  stage,
+  transaction
+}: {
+  incident: {
+    id: string | number
+    code: string
+    type: string
+    severity: string
+    resolutionNote?: string | null
+  }
+  orderId?: string | number | null
+  resource?: { id?: string | number; code: string; name: string } | null
+  stage?: { id?: string | number; code: string; name: string; status: string } | null
+  transaction: Transaction
+}) => {
+  const existingNotifications = await NotificationLog.findAll({
+    where: {
+      incidentId: incident.id,
+      notificationType: NOTIFICATION_TYPE.INCIDENT_ALERT
+    },
+    attributes: ['id', 'payload'],
+    transaction
+  })
+
+  const existingNotification = existingNotifications.find((notification) => {
+    const payload = notification.get('payload') as { trigger?: string } | null
+    return payload?.trigger === 'INCIDENT_RESOLVED'
+  })
+
+  if (existingNotification) return []
+
+  const order = orderId ? await loadOrderForRiskAlert(orderId, transaction) : null
+  const plainOrder = order ? getPlain<PlainOrderForAlert>(order) : null
+  const payload = {
+    trigger: 'INCIDENT_RESOLVED',
+    incidentId: incident.id,
+    incidentCode: incident.code,
+    severity: incident.severity,
+    type: incident.type,
+    orderId: plainOrder?.id ?? orderId ?? null,
+    orderCode: plainOrder?.code ?? null,
+    orderStageId: stage?.id ?? null,
+    stageCode: stage?.code ?? null,
+    resourceId: resource?.id ?? null,
+    resourceCode: resource?.code ?? null
+  }
+
+  const notification = await NotificationLog.create(
+    {
+      orderId: plainOrder?.id ?? orderId ?? null,
+      incidentId: incident.id,
+      channel: NOTIFICATION_CHANNEL.TELEGRAM,
+      notificationType: NOTIFICATION_TYPE.INCIDENT_ALERT,
+      status: NOTIFICATION_STATUS.PENDING,
+      recipient: process.env.TELEGRAM_CHAT_ID ?? null,
+      message: buildIncidentResolvedMessage({
+        incident,
+        order: plainOrder,
+        resource,
+        stage
+      }),
+      payload,
+      errorMessage: null,
+      sentAt: null
+    },
+    { transaction }
+  )
+
+  return [notification.get('id') as string | number]
+}
+
+export const createStageReadyToResumeNotificationLog = async ({
+  orderId,
+  resource,
+  stage,
+  transaction
+}: {
+  orderId?: string | number | null
+  resource?: { id?: string | number; code: string; name: string } | null
+  stage: { id: string | number; code: string; name: string; status: string }
+  transaction: Transaction
+}) => {
+  if (stage.status !== 'BLOCKED') return []
+
+  const existingNotifications = await NotificationLog.findAll({
+    where: {
+      orderId: orderId ?? null,
+      notificationType: NOTIFICATION_TYPE.PROGRESS_UPDATE
+    },
+    attributes: ['id', 'payload'],
+    transaction
+  })
+
+  const existingNotification = existingNotifications.find((notification) => {
+    const payload = notification.get('payload') as { trigger?: string; orderStageId?: string | number } | null
+    return payload?.trigger === 'STAGE_READY_TO_RESUME' && String(payload?.orderStageId ?? '') === String(stage.id)
+  })
+
+  if (existingNotification) return []
+
+  const order = orderId ? await loadOrderForRiskAlert(orderId, transaction) : null
+  const plainOrder = order ? getPlain<PlainOrderForAlert>(order) : null
+  const payload = {
+    trigger: 'STAGE_READY_TO_RESUME',
+    action: 'continue_stage',
+    orderId: plainOrder?.id ?? orderId ?? null,
+    orderCode: plainOrder?.code ?? null,
+    orderStageId: stage.id,
+    stageCode: stage.code,
+    stageName: stage.name,
+    resourceId: resource?.id ?? null,
+    resourceCode: resource?.code ?? null,
+    telegramCallback: {
+      action: 'continue_stage',
+      orderStageId: stage.id
+    }
+  }
+
+  const notification = await NotificationLog.create(
+    {
+      orderId: plainOrder?.id ?? orderId ?? null,
+      incidentId: null,
+      channel: NOTIFICATION_CHANNEL.TELEGRAM,
+      notificationType: NOTIFICATION_TYPE.PROGRESS_UPDATE,
+      status: NOTIFICATION_STATUS.PENDING,
+      recipient: process.env.TELEGRAM_CHAT_ID ?? null,
+      message: buildStageReadyToResumeMessage({
+        order: plainOrder,
+        resource,
+        stage
+      }),
+      payload,
+      errorMessage: null,
+      sentAt: null
+    },
+    { transaction }
+  )
+
+  return [notification.get('id') as string | number]
+}
+
 export const createStageCompletedNotificationLog = async ({
   completedAt,
   completedStage,
@@ -444,7 +891,7 @@ export const deliverPendingNotifications = async (notificationLogIds: Array<stri
 
     try {
       notification = await NotificationLog.findByPk(id, {
-        attributes: ['id', 'status', 'message', 'channel', 'notificationType', 'sentAt'],
+        attributes: ['id', 'status', 'message', 'channel', 'notificationType', 'payload', 'sentAt'],
         include: [
           {
             model: Order,
@@ -461,7 +908,44 @@ export const deliverPendingNotifications = async (notificationLogIds: Array<stri
 
       if (plainNotification.status !== NOTIFICATION_STATUS.PENDING) continue
 
-      await telegramService.sendMessage(plainNotification.message)
+      const telegramCallback = plainNotification.payload?.telegramCallback
+      const replyMarkup =
+        telegramCallback?.action === 'complete_stage' && telegramCallback.orderStageId
+          ? {
+              inline_keyboard: [
+                [
+                  {
+                    text: '✅ Xác nhận hoàn thành',
+                    callback_data: `${telegramCallback.action}:${telegramCallback.orderStageId}`
+                  }
+                ]
+              ]
+            }
+          : telegramCallback?.action === 'continue_stage' && telegramCallback.orderStageId
+            ? {
+                inline_keyboard: [
+                  [
+                    {
+                      text: '▶️ Tiếp tục công đoạn',
+                      callback_data: `${telegramCallback.action}:${telegramCallback.orderStageId}`
+                    }
+                  ]
+                ]
+              }
+            : telegramCallback?.action === 'resolve_incident' && telegramCallback.incidentId
+              ? {
+                  inline_keyboard: [
+                    [
+                      {
+                        text: '✅ Đã xử lý',
+                        callback_data: `${telegramCallback.action}:${telegramCallback.incidentId}`
+                      }
+                    ]
+                  ]
+                }
+              : undefined
+
+      await telegramService.sendMessage(plainNotification.message, { replyMarkup })
       const sentAt = new Date()
       await notification.update({
         status: NOTIFICATION_STATUS.SENT,
@@ -499,7 +983,15 @@ export const deliverPendingNotifications = async (notificationLogIds: Array<stri
 
 export default {
   buildRiskAlertMessage,
+  buildActiveStageMessage,
+  buildIncidentAlertMessage,
+  buildIncidentResolvedMessage,
+  buildStageReadyToResumeMessage,
   buildStageCompletedMessage,
+  createActiveStageNotificationLog,
+  createIncidentAlertNotificationLog,
+  createIncidentResolvedNotificationLog,
+  createStageReadyToResumeNotificationLog,
   createMissingRiskAlertNotificationsForActiveOrder,
   createRiskAlertNotificationsForTransition,
   createStageCompletedNotificationLog,

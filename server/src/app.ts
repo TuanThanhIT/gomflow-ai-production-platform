@@ -12,6 +12,7 @@ import initResourceRoute from './routes/resourceRoute.js'
 import initIncidentRoute from './routes/incidentRoute.js'
 import initDashboardRoute from './routes/dashboardRoute.js'
 import initAiRoute from './routes/aiRoute.js'
+import initActivityLogRoute from './routes/activityLogRoute.js'
 
 dotenv.config()
 
@@ -57,6 +58,7 @@ export const createApp = () => {
   initIncidentRoute(app)
   initDashboardRoute(app)
   initAiRoute(app)
+  initActivityLogRoute(app)
 
   app.use(errorHandler)
 

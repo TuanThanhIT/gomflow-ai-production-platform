@@ -1,6 +1,6 @@
 import type { Express } from 'express'
 import express from 'express'
-import { USER_ROLE } from '../constants/databaseConstants.js'
+import { USER_ROLE } from '../constants/userConstants.js'
 import resourceController from '../controllers/resourceController.js'
 import auth from '../middlewares/auth.js'
 import authorize from '../middlewares/authorize.js'
@@ -15,7 +15,14 @@ import {
 const resourceRoute = express.Router()
 
 const initResourceRoute = (app: Express) => {
-  resourceRoute.get('/', auth, validate(getResourcesSchema), resourceController.getResourcesController)
+  resourceRoute.get(
+    '/',
+    auth,
+    authorize(USER_ROLE.MANAGER, USER_ROLE.OPERATOR),
+    validate(getResourcesSchema),
+    resourceController.getResourcesController
+  )
+
   resourceRoute.post(
     '/',
     auth,
@@ -23,7 +30,15 @@ const initResourceRoute = (app: Express) => {
     validate(createResourceSchema),
     resourceController.createResourceController
   )
-  resourceRoute.get('/:id', auth, validate(getResourceDetailSchema), resourceController.getResourceDetailController)
+
+  resourceRoute.get(
+    '/:id',
+    auth,
+    authorize(USER_ROLE.MANAGER, USER_ROLE.OPERATOR),
+    validate(getResourceDetailSchema),
+    resourceController.getResourceDetailController
+  )
+
   resourceRoute.patch(
     '/:id',
     auth,
@@ -31,6 +46,7 @@ const initResourceRoute = (app: Express) => {
     validate(updateResourceSchema),
     resourceController.updateResourceController
   )
+
   resourceRoute.delete(
     '/:id',
     auth,

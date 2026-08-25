@@ -1,6 +1,6 @@
 import { Type, type SchemaUnion } from '@google/genai'
 import { AI_CONFIG } from '../config/ai.js'
-import { ORDER_PRIORITY } from '../constants/databaseConstants.js'
+import { ORDER_PRIORITY } from '../constants/orderConstants.js'
 import BadRequestError from '../errors/BadRequestError.js'
 import geminiService from './geminiService.js'
 import {

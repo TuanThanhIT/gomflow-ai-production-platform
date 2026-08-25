@@ -1,5 +1,5 @@
 import type { NextFunction, Request, RequestHandler, Response } from 'express'
-import { USER_ROLE } from '../constants/databaseConstants.js'
+import { USER_ROLE } from '../constants/userConstants.js'
 import ForbiddenError from '../errors/ForbiddenError.js'
 import UnauthorizedError from '../errors/UnauthorizedError.js'
 import type { UserRole } from '../types/auth.js'

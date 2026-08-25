@@ -1,5 +1,5 @@
 import Joi from 'joi'
-import { RESOURCE_TYPE } from '../constants/databaseConstants.js'
+import { RESOURCE_TYPE } from '../constants/resourceConstants.js'
 import { idParams } from './commons/numberField.js'
 
 const templateCode = Joi.string()

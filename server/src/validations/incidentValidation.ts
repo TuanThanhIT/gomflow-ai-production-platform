@@ -1,5 +1,5 @@
 import Joi from 'joi'
-import { INCIDENT_SEVERITY, INCIDENT_STATUS, INCIDENT_TYPE } from '../constants/databaseConstants.js'
+import { INCIDENT_SEVERITY, INCIDENT_STATUS, INCIDENT_TYPE } from '../constants/incidentConstants.js'
 import { idParams } from './commons/numberField.js'
 
 const optionalPositiveId = (name: string) =>

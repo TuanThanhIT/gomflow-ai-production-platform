@@ -1,6 +1,6 @@
 import { DataTypes } from 'sequelize'
 import sequelize from '../config/db.js'
-import { RESOURCE_STATUS, RESOURCE_TYPE } from '../constants/databaseConstants.js'
+import { RESOURCE_STATUS, RESOURCE_TYPE } from '../constants/resourceConstants.js'
 
 const Resource = sequelize.define(
   'Resource',

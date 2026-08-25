@@ -1,20 +1,22 @@
 ﻿import type { Transaction } from 'sequelize'
 import { Op } from 'sequelize'
 import sequelize from '../config/db.js'
-import {
-  ACTIVITY_EVENT_TYPE,
-  INCIDENT_STATUS,
-  ORDER_STAGE_STATUS,
-  ORDER_STATUS,
-  RESOURCE_STATUS
-} from '../constants/databaseConstants.js'
+import { ACTIVITY_EVENT_TYPE } from '../constants/activityConstants.js'
+import { INCIDENT_STATUS } from '../constants/incidentConstants.js'
+import { ORDER_STATUS } from '../constants/orderConstants.js'
+import { ORDER_STAGE_STATUS } from '../constants/orderStageConstants.js'
+import { RESOURCE_STATUS } from '../constants/resourceConstants.js'
 import { SOCKET_EVENTS } from '../constants/socketEvents.js'
 import BadRequestError from '../errors/BadRequestError.js'
 import NotFoundError from '../errors/NotFoundError.js'
 import { ActivityLog, Incident, Order, OrderStage, ProcessTemplateStep, Resource } from '../models/index.js'
 import type { AuthenticatedUser } from '../types/auth.js'
 import { getOrderByIdService } from './orderService.js'
-import { createStageCompletedNotificationLog, deliverPendingNotifications } from './notificationService.js'
+import {
+  createActiveStageNotificationLog,
+  createStageCompletedNotificationLog,
+  deliverPendingNotifications
+} from './notificationService.js'
 import { emitRealtimeEvents, type RealtimeEvent } from './socketService.js'
 
 export type AssignResourceInput = {
@@ -442,7 +444,10 @@ export const completeOrderStageService = async (stageId: string | number, curren
 
     const previousOrderStatus = order.get('status') as string
     if (previousOrderStatus !== ORDER_STATUS.IN_PROGRESS && previousOrderStatus !== ORDER_STATUS.AT_RISK) {
-      throw new BadRequestError('Đơn hàng không ở trạng thái cho phép hoàn thành công đoạn.')
+      throw new BadRequestError('Đơn hàng không ở trạng thái cho phép hoàn thành công đoạn.', {
+        code: 'ORDER_NOT_COMPLETABLE',
+        orderStatus: previousOrderStatus
+      })
     }
 
     const currentAssignedResourceId = currentStage.get('assignedResourceId') as string | number | null
@@ -482,7 +487,10 @@ export const completeOrderStageService = async (stageId: string | number, curren
     }
 
     if (currentStageStatus !== ORDER_STAGE_STATUS.IN_PROGRESS) {
-      throw new BadRequestError('Chỉ có thể hoàn thành công đoạn đang thực hiện.')
+      throw new BadRequestError('Chỉ có thể hoàn thành công đoạn đang thực hiện.', {
+        code: 'STAGE_NOT_IN_PROGRESS',
+        stageStatus: currentStageStatus
+      })
     }
 
     if (currentResource?.get('status') === RESOURCE_STATUS.BROKEN && currentResourceIncident) {
@@ -619,6 +627,7 @@ export const completeOrderStageService = async (stageId: string | number, curren
         eventType: ACTIVITY_EVENT_TYPE.STAGE_COMPLETED,
         message: `Stage ${currentStage.get('code')} completed`,
         metadata: {
+          source: currentUser.source ?? 'WEB',
           stageCode: currentStage.get('code'),
           stepOrder: currentStage.get('stepOrder')
         }
@@ -634,6 +643,7 @@ export const completeOrderStageService = async (stageId: string | number, curren
         eventType: ACTIVITY_EVENT_TYPE.STAGE_STARTED,
         message: `Stage ${nextStage.get('code')} started`,
         metadata: {
+          source: currentUser.source ?? 'WEB',
           stageCode: nextStage.get('code'),
           stepOrder: nextStage.get('stepOrder')
         }
@@ -647,6 +657,7 @@ export const completeOrderStageService = async (stageId: string | number, curren
         eventType: ACTIVITY_EVENT_TYPE.ORDER_STATUS_CHANGED,
         message: `Order ${order.get('code')} completed`,
         metadata: {
+          source: currentUser.source ?? 'WEB',
           previousStatus: previousOrderStatus,
           newStatus: ORDER_STATUS.COMPLETED
         }
@@ -656,22 +667,24 @@ export const completeOrderStageService = async (stageId: string | number, curren
     await ActivityLog.bulkCreate(logs, { transaction })
 
     const plainNextStage = nextStage ? (nextStage.get({ plain: true }) as StageWithTemplate) : null
-    const notificationLogIds = await createStageCompletedNotificationLog({
-      order: {
-        id: order.get('id') as string | number,
-        code: order.get('code') as string,
-        productName: order.get('productName') as string | null,
-        progressPercent,
-        aiAnalysis: order.get('aiAnalysis') as
-          | {
-              manufacturingEstimate?: {
-                estimatedFiringTemperatureC?: number | null
-                estimatedFiringDurationMinutes?: number | null
-              } | null
-            }
-          | null
-          | undefined
-      },
+    const notificationOrder = {
+      id: order.get('id') as string | number,
+      code: order.get('code') as string,
+      productName: order.get('productName') as string | null,
+      progressPercent,
+      aiAnalysis: order.get('aiAnalysis') as
+        | {
+            manufacturingEstimate?: {
+              estimatedFiringTemperatureC?: number | null
+              estimatedFiringDurationMinutes?: number | null
+            } | null
+          }
+        | null
+        | undefined
+    }
+
+    const completedNotificationLogIds = await createStageCompletedNotificationLog({
+      order: notificationOrder,
       completedStage: {
         id: currentStage.get('id') as string | number,
         code: currentStage.get('code') as string,
@@ -692,6 +705,22 @@ export const completeOrderStageService = async (stageId: string | number, curren
       completedAt: now,
       transaction
     })
+
+    const activeStageNotificationLogIds =
+      nextStageStarted && nextStage
+        ? await createActiveStageNotificationLog({
+            order: notificationOrder,
+            activeStage: {
+              id: nextStage.get('id') as string | number,
+              code: nextStage.get('code') as string,
+              name: nextStage.get('name') as string
+            },
+            progressPercent,
+            transaction
+          })
+        : []
+
+    const notificationLogIds = [...completedNotificationLogIds, ...activeStageNotificationLogIds]
 
     const realtimeEvents: RealtimeEvent[] = [
       {
@@ -871,6 +900,7 @@ export const resumeOrderStageService = async (stageId: string | number, currentU
         eventType: ACTIVITY_EVENT_TYPE.STAGE_STARTED,
         message: `Stage ${stage.get('code')} resumed`,
         metadata: {
+          source: currentUser.source ?? 'WEB',
           previousStatus: ORDER_STAGE_STATUS.BLOCKED,
           newStatus: ORDER_STAGE_STATUS.IN_PROGRESS,
           resourceId: resource.get('id'),

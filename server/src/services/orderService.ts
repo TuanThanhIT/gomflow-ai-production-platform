@@ -1,15 +1,11 @@
 import type { Model, Transaction, WhereOptions } from 'sequelize'
 import { Op } from 'sequelize'
 import sequelize from '../config/db.js'
-import {
-  ACTIVITY_EVENT_TYPE,
-  INCIDENT_STATUS,
-  ORDER_PRIORITY,
-  ORDER_STAGE_STATUS,
-  ORDER_STATUS,
-  RESOURCE_STATUS,
-  RISK_LEVEL
-} from '../constants/databaseConstants.js'
+import { ACTIVITY_EVENT_TYPE } from '../constants/activityConstants.js'
+import { INCIDENT_STATUS } from '../constants/incidentConstants.js'
+import { ORDER_PRIORITY, ORDER_STATUS, RISK_LEVEL } from '../constants/orderConstants.js'
+import { ORDER_STAGE_STATUS } from '../constants/orderStageConstants.js'
+import { RESOURCE_STATUS } from '../constants/resourceConstants.js'
 import { SOCKET_EVENTS } from '../constants/socketEvents.js'
 import BadRequestError from '../errors/BadRequestError.js'
 import NotFoundError from '../errors/NotFoundError.js'
@@ -25,7 +21,11 @@ import {
   User
 } from '../models/index.js'
 import type { AuthenticatedUser } from '../types/auth.js'
-import { createRiskAlertNotificationsForTransition, deliverPendingNotifications } from './notificationService.js'
+import {
+  createActiveStageNotificationLog,
+  createRiskAlertNotificationsForTransition,
+  deliverPendingNotifications
+} from './notificationService.js'
 import { emitRealtimeEvents, type RealtimeEvent } from './socketService.js'
 
 export type CreateOrderInput = {
@@ -604,7 +604,7 @@ export const startOrderService = async (orderId: string | number, currentUser: A
   const result = await sequelize.transaction(async (transaction) => {
     const now = new Date()
     const order = await Order.findByPk(orderId, {
-      attributes: ['id', 'code', 'status', 'riskLevel'],
+      attributes: ['id', 'code', 'customerName', 'productName', 'status', 'riskLevel', 'aiAnalysis'],
       transaction,
       lock: transaction.LOCK.UPDATE
     })
@@ -756,6 +756,7 @@ export const startOrderService = async (orderId: string | number, currentUser: A
           eventType: ACTIVITY_EVENT_TYPE.ORDER_STATUS_CHANGED,
           message: `Order ${orderCode} started production`,
           metadata: {
+            source: currentUser.source ?? 'WEB',
             previousStatus: ORDER_STATUS.PENDING,
             newStatus: nextOrderStatus
           }
@@ -768,6 +769,7 @@ export const startOrderService = async (orderId: string | number, currentUser: A
           eventType: ACTIVITY_EVENT_TYPE.STAGE_STARTED,
           message: `Stage ${firstStage.get('code')} started`,
           metadata: {
+            source: currentUser.source ?? 'WEB',
             stageCode: firstStage.get('code'),
             stepOrder: firstStage.get('stepOrder')
           }
@@ -776,7 +778,7 @@ export const startOrderService = async (orderId: string | number, currentUser: A
       { transaction }
     )
 
-    const notificationLogIds = await createRiskAlertNotificationsForTransition({
+    const riskNotificationLogIds = await createRiskAlertNotificationsForTransition({
       orderId: order.get('id') as string | number,
       incidentId: null,
       previousStatus: ORDER_STATUS.PENDING,
@@ -785,6 +787,34 @@ export const startOrderService = async (orderId: string | number, currentUser: A
       newRiskLevel: order.get('riskLevel') as (typeof RISK_LEVEL)[keyof typeof RISK_LEVEL],
       transaction
     })
+
+    const activeStageNotificationLogIds = await createActiveStageNotificationLog({
+      order: {
+        id: order.get('id') as string | number,
+        code: order.get('code') as string,
+        customerName: order.get('customerName') as string | null,
+        productName: order.get('productName') as string | null,
+        progressPercent: 0,
+        aiAnalysis: order.get('aiAnalysis') as
+          | {
+              manufacturingEstimate?: {
+                estimatedFiringTemperatureC?: number | null
+                estimatedFiringDurationMinutes?: number | null
+              } | null
+            }
+          | null
+          | undefined
+      },
+      activeStage: {
+        id: firstStage.get('id') as string | number,
+        code: firstStage.get('code') as string,
+        name: firstStage.get('name') as string
+      },
+      progressPercent: 0,
+      transaction
+    })
+
+    const notificationLogIds = [...riskNotificationLogIds, ...activeStageNotificationLogIds]
 
     const realtimeEvents: RealtimeEvent[] = [
       {

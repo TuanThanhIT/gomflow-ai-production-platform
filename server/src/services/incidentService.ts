@@ -1,21 +1,22 @@
 ﻿import type { Model, Transaction, WhereOptions } from 'sequelize'
 import { col, fn, Op } from 'sequelize'
 import sequelize from '../config/db.js'
-import {
-  ACTIVITY_EVENT_TYPE,
-  INCIDENT_SEVERITY,
-  INCIDENT_STATUS,
-  INCIDENT_TYPE,
-  ORDER_STAGE_STATUS,
-  RISK_LEVEL,
-  RESOURCE_STATUS
-} from '../constants/databaseConstants.js'
+import { ACTIVITY_EVENT_TYPE } from '../constants/activityConstants.js'
+import { INCIDENT_SEVERITY, INCIDENT_STATUS, INCIDENT_TYPE } from '../constants/incidentConstants.js'
+import { RISK_LEVEL } from '../constants/orderConstants.js'
+import { ORDER_STAGE_STATUS } from '../constants/orderStageConstants.js'
+import { RESOURCE_STATUS } from '../constants/resourceConstants.js'
 import { SOCKET_EVENTS } from '../constants/socketEvents.js'
 import BadRequestError from '../errors/BadRequestError.js'
 import NotFoundError from '../errors/NotFoundError.js'
 import { ActivityLog, Incident, IncidentAffectedOrder, Order, OrderStage, Resource, User } from '../models/index.js'
 import type { AuthenticatedUser } from '../types/auth.js'
-import { deliverPendingNotifications } from './notificationService.js'
+import {
+  createIncidentAlertNotificationLog,
+  createIncidentResolvedNotificationLog,
+  createStageReadyToResumeNotificationLog,
+  deliverPendingNotifications
+} from './notificationService.js'
 import { recalculateRisksForOrders } from './riskEngineService.js'
 import { emitRealtimeEvents, type RealtimeEvent } from './socketService.js'
 
@@ -147,7 +148,7 @@ const incidentDetailInclude = [
       {
         model: Order,
         as: 'order',
-        attributes: ['id', 'code', 'customerName', 'productName', 'status']
+        attributes: ['id', 'code', 'customerName', 'productName', 'status', 'progressPercent']
       }
     ]
   },
@@ -454,6 +455,7 @@ export const createIncidentService = async (input: CreateIncidentInput, currentU
         eventType: ACTIVITY_EVENT_TYPE.INCIDENT_CREATED,
         message: `Incident ${code} created`,
         metadata: {
+          source: currentUser.source ?? 'WEB',
           type: input.type,
           severity: input.severity,
           resourceId: plainResource?.id ?? null
@@ -473,6 +475,7 @@ export const createIncidentService = async (input: CreateIncidentInput, currentU
           eventType: RESOURCE_STATUS_CHANGED,
           message: `Resource ${plainResource?.code} marked as BROKEN`,
           metadata: {
+            source: currentUser.source ?? 'WEB',
             resourceId: plainResource?.id ?? null,
             previousStatus: plainResource?.status,
             newStatus: RESOURCE_STATUS.BROKEN
@@ -501,6 +504,7 @@ export const createIncidentService = async (input: CreateIncidentInput, currentU
           eventType: ACTIVITY_EVENT_TYPE.STAGE_BLOCKED,
           message: `Stage ${plainStage.code} blocked by incident ${code}`,
           metadata: {
+            source: currentUser.source ?? 'WEB',
             previousStatus: ORDER_STAGE_STATUS.IN_PROGRESS,
             newStatus: ORDER_STAGE_STATUS.BLOCKED
           }
@@ -518,9 +522,40 @@ export const createIncidentService = async (input: CreateIncidentInput, currentU
 
     await ActivityLog.bulkCreate(logs, { transaction })
 
+    const incidentNotificationLogIds = await createIncidentAlertNotificationLog({
+      incident: {
+        id: incident.get('id') as string | number,
+        code,
+        type: input.type,
+        severity: input.severity,
+        rawDescription: description,
+        estimatedDelayMinutes: input.estimatedDelayMinutes ?? null
+      },
+      orderId: plainStage?.orderId ?? affectedOrderIds[0] ?? null,
+      resource: plainResource
+        ? {
+            id: plainResource.id,
+            code: plainResource.code,
+            name: plainResource.name
+          }
+        : null,
+      stage: plainStage
+        ? {
+            id: plainStage.id,
+            code: plainStage.code,
+            name: plainStage.name,
+            status:
+              input.type === INCIDENT_TYPE.EQUIPMENT_FAILURE && plainStage.status === ORDER_STAGE_STATUS.IN_PROGRESS
+                ? ORDER_STAGE_STATUS.BLOCKED
+                : plainStage.status
+          }
+        : null,
+      transaction
+    })
+
     return {
       incidentId: incident.get('id') as string | number,
-      notificationLogIds: riskRecalculation.notificationLogIds,
+      notificationLogIds: [...incidentNotificationLogIds, ...riskRecalculation.notificationLogIds],
       realtimeEvents: [
         {
           event: SOCKET_EVENTS.INCIDENT_CREATED,
@@ -553,7 +588,7 @@ export const resolveIncidentService = async (
 ) => {
   const result = await sequelize.transaction(async (transaction) => {
     const incident = await Incident.findByPk(id, {
-      attributes: ['id', 'code', 'resourceId', 'orderStageId', 'type', 'status'],
+      attributes: ['id', 'code', 'resourceId', 'orderStageId', 'type', 'severity', 'status'],
       transaction,
       lock: transaction.LOCK.UPDATE
     })
@@ -563,7 +598,10 @@ export const resolveIncidentService = async (
     }
 
     if (incident.get('status') !== INCIDENT_STATUS.OPEN) {
-      throw new BadRequestError('Chỉ có thể xử lý sự cố đang mở.')
+      throw new BadRequestError('Chỉ có thể xử lý sự cố đang mở.', {
+        code: 'INCIDENT_NOT_OPEN',
+        incidentStatus: incident.get('status')
+      })
     }
 
     const stage = await loadOrderStage(incident.get('orderStageId') as number | null, transaction)
@@ -624,6 +662,7 @@ export const resolveIncidentService = async (
         eventType: ACTIVITY_EVENT_TYPE.INCIDENT_RESOLVED,
         message: `Incident ${incident.get('code')} resolved`,
         metadata: {
+          source: currentUser.source ?? 'WEB',
           resourceId: plainResource?.id ?? null,
           resolutionNote: input.resolutionNote.trim()
         }
@@ -631,9 +670,63 @@ export const resolveIncidentService = async (
       { transaction }
     )
 
+    const incidentResolvedNotificationLogIds =
+      currentUser.source === 'TELEGRAM'
+        ? []
+        : await createIncidentResolvedNotificationLog({
+            incident: {
+              id: incident.get('id') as string | number,
+              code: incident.get('code') as string,
+              type: incident.get('type') as string,
+              severity: incident.get('severity') as string,
+              resolutionNote: input.resolutionNote.trim()
+            },
+            orderId: plainStage?.orderId ?? affectedOrderIds[0] ?? null,
+            resource: plainResource
+              ? {
+                  id: plainResource.id,
+                  code: plainResource.code,
+                  name: plainResource.name
+                }
+              : null,
+            stage: plainStage
+              ? {
+                  id: plainStage.id,
+                  code: plainStage.code,
+                  name: plainStage.name,
+                  status: plainStage.status
+                }
+              : null,
+            transaction
+          })
+    const stageReadyNotificationLogIds =
+      plainStage?.status === ORDER_STAGE_STATUS.BLOCKED
+        ? await createStageReadyToResumeNotificationLog({
+            orderId: plainStage.orderId ?? affectedOrderIds[0] ?? null,
+            resource: plainResource
+              ? {
+                  id: plainResource.id,
+                  code: plainResource.code,
+                  name: plainResource.name
+                }
+              : null,
+            stage: {
+              id: plainStage.id,
+              code: plainStage.code,
+              name: plainStage.name,
+              status: plainStage.status
+            },
+            transaction
+          })
+        : []
+
     return {
       incidentId: incident.get('id') as string | number,
-      notificationLogIds: riskRecalculation.notificationLogIds,
+      notificationLogIds: [
+        ...incidentResolvedNotificationLogIds,
+        ...stageReadyNotificationLogIds,
+        ...riskRecalculation.notificationLogIds
+      ],
       realtimeEvents: [
         {
           event: SOCKET_EVENTS.INCIDENT_RESOLVED,

@@ -9,6 +9,7 @@ import type {
   GetResourcesParams,
   Resource,
   ResourceResponse,
+  ResourcesPagination,
   ResourcesResponse,
   UpdateResourcePayload
 } from '../../types/resource'
@@ -16,6 +17,7 @@ import { getApiErrorMessage } from '../../utils/apiError'
 
 type ResourceState = {
   items: Resource[]
+  pagination: ResourcesPagination
   selectedResource?: Resource
   listError: string
   detailError: string
@@ -26,6 +28,12 @@ type ResourceState = {
 
 const initialState: ResourceState = {
   items: [],
+  pagination: {
+    page: 1,
+    limit: 10,
+    totalItems: 0,
+    totalPages: 0
+  },
   selectedResource: undefined,
   listError: '',
   detailError: '',
@@ -143,11 +151,13 @@ const resourceSlice = createSlice({
         state.listError = ''
       })
       .addCase(getResources.fulfilled, (state, action: PayloadAction<ResourcesResponse>) => {
-        state.items = action.payload.data
+        state.items = action.payload.data.items
+        state.pagination = action.payload.data.pagination
         state.listError = ''
       })
       .addCase(getResources.rejected, (state, action) => {
         state.items = []
+        state.pagination = initialState.pagination
         state.listError = getApiErrorMessage(action.payload, 'Không thể tải danh sách tài nguyên.')
       })
       .addCase(getResourceById.pending, (state) => {

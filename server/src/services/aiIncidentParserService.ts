@@ -1,6 +1,7 @@
 import { Type, type SchemaUnion } from '@google/genai'
 import { AI_CONFIG } from '../config/ai.js'
-import { INCIDENT_SEVERITY, INCIDENT_TYPE, RESOURCE_STATUS, RESOURCE_TYPE } from '../constants/databaseConstants.js'
+import { INCIDENT_SEVERITY, INCIDENT_TYPE } from '../constants/incidentConstants.js'
+import { RESOURCE_STATUS, RESOURCE_TYPE } from '../constants/resourceConstants.js'
 import BadRequestError from '../errors/BadRequestError.js'
 import { Resource } from '../models/index.js'
 import geminiService from './geminiService.js'

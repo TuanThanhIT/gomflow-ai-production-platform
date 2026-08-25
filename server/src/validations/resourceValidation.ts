@@ -1,5 +1,5 @@
 import Joi from 'joi'
-import { RESOURCE_STATUS, RESOURCE_TYPE } from '../constants/databaseConstants.js'
+import { RESOURCE_STATUS, RESOURCE_TYPE } from '../constants/resourceConstants.js'
 import { idParams } from './commons/numberField.js'
 
 export const getResourcesSchema = {
@@ -17,6 +17,17 @@ export const getResourcesSchema = {
     }),
     search: Joi.string().trim().allow('').max(150).optional().messages({
       'string.max': 'search must be less than or equal to 150 characters'
+    }),
+    page: Joi.number().integer().min(1).default(1).optional().messages({
+      'number.base': 'page must be a number',
+      'number.integer': 'page must be an integer',
+      'number.min': 'page must be greater than or equal to 1'
+    }),
+    limit: Joi.number().integer().min(1).max(100).default(10).optional().messages({
+      'number.base': 'limit must be a number',
+      'number.integer': 'limit must be an integer',
+      'number.min': 'limit must be greater than or equal to 1',
+      'number.max': 'limit must be less than or equal to 100'
     })
   })
 }

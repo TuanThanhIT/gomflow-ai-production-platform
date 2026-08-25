@@ -3,6 +3,7 @@ import dotenv from 'dotenv'
 import createApp from './app.js'
 import { testConnection } from './config/db.js'
 import { initializeSocketServer } from './services/socketService.js'
+import { startTelegramCallbackPolling } from './services/telegramCallbackService.js'
 
 dotenv.config()
 
@@ -18,6 +19,8 @@ const startServer = async () => {
   httpServer.listen(PORT, HOST, () => {
     console.log(`Server running on http://${HOST}:${PORT}`)
   })
+
+  startTelegramCallbackPolling()
 }
 
 startServer().catch((error) => {

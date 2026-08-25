@@ -1,6 +1,6 @@
 import { DataTypes } from 'sequelize'
 import sequelize from '../config/db.js'
-import { USER_ROLE } from '../constants/databaseConstants.js'
+import { USER_ROLE } from '../constants/userConstants.js'
 
 const User = sequelize.define(
   'User',

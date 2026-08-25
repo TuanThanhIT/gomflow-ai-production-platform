@@ -103,7 +103,7 @@ const UsageStat = ({ label, value }: { label: string; value?: number }) => (
 
 const ResourcesPage = () => {
   const dispatch = useAppDispatch()
-  const { detailError, items, listError, selectedResource } = useAppSelector((state) => state.resource)
+  const { detailError, items, listError, pagination, selectedResource } = useAppSelector((state) => state.resource)
   const currentUser = useAppSelector((state) => state.auth.user)
   const loading = useAppSelector((state) => state.ui.loadingMap['resource/getResources'] || false)
   const detailLoading = useAppSelector((state) => state.ui.loadingMap['resource/getResourceById'] || false)
@@ -114,7 +114,14 @@ const ResourcesPage = () => {
   const canManage = currentUser?.role === 'ADMIN' || currentUser?.role === 'MANAGER'
 
   const [searchInput, setSearchInput] = useState('')
-  const [filters, setFilters] = useState<GetResourcesParams>({ active: 'active', search: '', status: '', type: '' })
+  const [filters, setFilters] = useState<GetResourcesParams>({
+    active: 'active',
+    search: '',
+    status: '',
+    type: '',
+    page: 1,
+    limit: 10
+  })
   const [mode, setMode] = useState<PageMode>('idle')
   const [form, setForm] = useState<CreateResourcePayload>(emptyForm)
 
@@ -123,7 +130,9 @@ const ResourcesPage = () => {
       active: filters.active || 'active',
       search: filters.search?.trim() || undefined,
       status: filters.status || undefined,
-      type: filters.type || undefined
+      type: filters.type || undefined,
+      page: filters.page,
+      limit: filters.limit
     }),
     [filters]
   )
@@ -133,7 +142,11 @@ const ResourcesPage = () => {
   }, [dispatch, requestParams])
 
   const updateFilter = (nextFilters: Partial<GetResourcesParams>) => {
-    setFilters((current) => ({ ...current, ...nextFilters }))
+    setFilters((current) => ({
+      ...current,
+      ...nextFilters,
+      page: nextFilters.page ?? 1
+    }))
   }
 
   const handleSearch = () => updateFilter({ search: searchInput })
@@ -492,7 +505,9 @@ const ResourcesPage = () => {
                       key={resource.id}
                       className='border-b border-slate-100 transition hover:bg-slate-50/80 last:border-0'
                     >
-                      <td className='px-4 py-4 font-semibold text-slate-500'>{index + 1}</td>
+                      <td className='px-4 py-4 font-semibold text-slate-500'>
+                        {(pagination.page - 1) * pagination.limit + index + 1}
+                      </td>
                       <td className='px-4 py-4 font-semibold text-slate-800'>{resource.code}</td>
                       <td className='px-4 py-4 text-slate-700'>{resource.name}</td>
                       <td className='px-4 py-4 font-medium text-slate-600'>{getResourceTypeLabel(resource.type)}</td>
@@ -557,6 +572,47 @@ const ResourcesPage = () => {
               </table>
             </div>
           )}
+
+          {pagination.totalPages > 1 ? (
+            <div className='flex flex-col gap-3 border-t border-slate-200 p-4 sm:flex-row sm:items-center sm:justify-between'>
+              <p className='text-sm text-slate-500'>
+                Trang {pagination.page}/{Math.max(pagination.totalPages, 1)} · {pagination.totalItems} tài nguyên
+              </p>
+              <div className='flex flex-wrap gap-2'>
+                <button
+                  type='button'
+                  disabled={pagination.page <= 1 || loading}
+                  onClick={() => updateFilter({ page: pagination.page - 1 })}
+                  className='h-10 cursor-pointer rounded-lg border border-slate-200 bg-white px-4 text-sm font-semibold text-slate-700 disabled:cursor-not-allowed disabled:text-slate-300'
+                >
+                  Trước
+                </button>
+                {Array.from({ length: pagination.totalPages }, (_, index) => index + 1).map((pageNumber) => (
+                  <button
+                    key={pageNumber}
+                    type='button'
+                    disabled={loading}
+                    onClick={() => updateFilter({ page: pageNumber })}
+                    className={`h-10 min-w-10 cursor-pointer rounded-lg px-3 text-sm font-semibold disabled:cursor-not-allowed ${
+                      pageNumber === pagination.page
+                        ? 'bg-cyan-600 text-white'
+                        : 'border border-slate-200 bg-white text-slate-700 hover:bg-slate-50'
+                    }`}
+                  >
+                    {pageNumber}
+                  </button>
+                ))}
+                <button
+                  type='button'
+                  disabled={pagination.page >= pagination.totalPages || loading}
+                  onClick={() => updateFilter({ page: pagination.page + 1 })}
+                  className='h-10 cursor-pointer rounded-lg border border-slate-200 bg-white px-4 text-sm font-semibold text-slate-700 disabled:cursor-not-allowed disabled:text-slate-300'
+                >
+                  Sau
+                </button>
+              </div>
+            </div>
+          ) : null}
         </section>
       </div>
     </main>

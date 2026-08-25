@@ -1,5 +1,6 @@
 import { Route, Routes } from 'react-router-dom'
 import AppLayout from '../components/layouts/AppLayout'
+import ActivityLogsPage from '../pages/ActivityLogsPage'
 import CreateOrderPage from '../pages/CreateOrderPage'
 import DashboardPage from '../pages/DashboardPage'
 import IncidentsPage from '../pages/IncidentsPage'
@@ -22,6 +23,7 @@ const AllRoute = () => {
           <Route path='/orders' element={<OrdersPage />} />
           <Route path='/resources' element={<ResourcesPage />} />
           <Route path='/incidents' element={<IncidentsPage />} />
+          <Route path='/activity-logs' element={<ActivityLogsPage />} />
           <Route path='/orders/new' element={<CreateOrderPage />} />
           <Route path='/orders/:id' element={<OrderDetailPage />} />
         </Route>

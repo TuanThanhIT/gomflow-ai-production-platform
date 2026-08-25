@@ -1,6 +1,6 @@
 import { DataTypes } from 'sequelize'
 import sequelize from '../config/db.js'
-import { ORDER_PRIORITY, ORDER_STATUS, RISK_LEVEL } from '../constants/databaseConstants.js'
+import { ORDER_PRIORITY, ORDER_STATUS, RISK_LEVEL } from '../constants/orderConstants.js'
 
 const Order = sequelize.define(
   'Order',

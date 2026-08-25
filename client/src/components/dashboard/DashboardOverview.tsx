@@ -246,15 +246,15 @@ const KanbanColumn = ({
   label: string
   status: string
 }) => (
-  <div className='flex min-h-[360px] w-[280px] shrink-0 flex-col rounded-lg border border-slate-200 bg-slate-50 lg:w-auto'>
-    <div className='flex items-center justify-between border-b border-slate-200 px-4 py-3'>
+  <div className='flex h-full min-h-0 w-[280px] shrink-0 flex-col rounded-lg border border-slate-200 bg-slate-50 lg:w-auto'>
+    <div className='shrink-0 flex items-center justify-between border-b border-slate-200 px-4 py-3'>
       <div>
         <p className='text-xs font-bold tracking-wide text-slate-500'>{title}</p>
         <p className='mt-1 text-xs text-slate-400'>{label}</p>
       </div>
       <span className='rounded-full bg-white px-2.5 py-1 text-sm font-bold text-slate-700'>{column.total}</span>
     </div>
-    <div className='flex-1 space-y-3 overflow-y-auto p-3'>
+    <div className='min-h-0 flex-1 space-y-3 overflow-y-auto p-3 [scrollbar-gutter:stable]'>
       {column.items.length > 0 ? (
         column.items.map((order) => <OrderKanbanCard key={order.id} order={order} />)
       ) : (
@@ -266,7 +266,7 @@ const KanbanColumn = ({
     {column.total > column.items.length ? (
       <Link
         to={`/orders?status=${status}`}
-        className='border-t border-slate-200 px-4 py-3 text-center text-sm font-semibold text-cyan-700 hover:bg-white'
+        className='shrink-0 border-t border-slate-200 px-4 py-3 text-center text-sm font-semibold text-cyan-700 hover:bg-white'
       >
         Xem tất cả {column.total}
       </Link>
@@ -298,7 +298,7 @@ const ProductionKanban = ({ data }: { data: DashboardData }) => (
       </div>
     ) : (
       <div className='overflow-x-auto p-4'>
-        <div className='grid min-w-[1120px] gap-4 lg:grid-cols-4'>
+        <div className='grid h-[calc(100vh-260px)] min-h-[420px] max-h-[640px] min-w-[1120px] gap-4 lg:grid-cols-4'>
           {kanbanConfig.map((column) => (
             <KanbanColumn
               key={column.key}

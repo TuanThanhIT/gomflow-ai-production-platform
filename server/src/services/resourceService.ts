@@ -1,7 +1,9 @@
 import type { Model, Transaction, WhereOptions } from 'sequelize'
 import { col, fn, Op, UniqueConstraintError } from 'sequelize'
 import sequelize from '../config/db.js'
-import { INCIDENT_STATUS, ORDER_STAGE_STATUS, RESOURCE_STATUS, RESOURCE_TYPE } from '../constants/databaseConstants.js'
+import { INCIDENT_STATUS } from '../constants/incidentConstants.js'
+import { ORDER_STAGE_STATUS } from '../constants/orderStageConstants.js'
+import { RESOURCE_STATUS, RESOURCE_TYPE } from '../constants/resourceConstants.js'
 import BadRequestError from '../errors/BadRequestError.js'
 import ConflictError from '../errors/ConflictError.js'
 import NotFoundError from '../errors/NotFoundError.js'
@@ -12,6 +14,8 @@ export type GetResourcesQuery = {
   status?: (typeof RESOURCE_STATUS)[keyof typeof RESOURCE_STATUS]
   active?: 'active' | 'inactive' | 'all'
   search?: string
+  page?: string | number
+  limit?: string | number
 }
 
 export type CreateResourceInput = {
@@ -58,6 +62,10 @@ const RESOURCE_ATTRIBUTES = [
   'createdAt',
   'updatedAt'
 ]
+
+const DEFAULT_PAGE = 1
+const DEFAULT_LIMIT = 10
+const MAX_LIMIT = 100
 
 const emptyUsageSummary = (): UsageSummary => ({
   orderStageCount: 0,
@@ -261,20 +269,48 @@ const assertCanDeactivateResource = async (resource: Model, transaction: Transac
 
 const createDuplicateCodeError = () => new ConflictError('Mã tài nguyên đã tồn tại.')
 
+const toPositiveInteger = (value: string | number | undefined, fallback: number) => {
+  const parsed = Number(value)
+  if (!Number.isInteger(parsed) || parsed <= 0) return fallback
+  return parsed
+}
+
+const normalizePagination = (query: GetResourcesQuery) => {
+  const page = toPositiveInteger(query.page, DEFAULT_PAGE)
+  const limit = Math.min(toPositiveInteger(query.limit, DEFAULT_LIMIT), MAX_LIMIT)
+
+  return {
+    page,
+    limit,
+    offset: (page - 1) * limit
+  }
+}
+
 export const getResourcesService = async (query: GetResourcesQuery) => {
-  const resources = await Resource.findAll({
+  const { limit, offset, page } = normalizePagination(query)
+  const { count, rows } = await Resource.findAndCountAll({
     where: buildResourceWhere(query),
     attributes: RESOURCE_ATTRIBUTES,
     order: [
       ['isActive', 'DESC'],
       ['type', 'ASC'],
       ['code', 'ASC']
-    ]
+    ],
+    limit,
+    offset
   })
 
-  const summaries = await getUsageSummaries(resources.map((resource) => resource.get('id') as string | number))
+  const summaries = await getUsageSummaries(rows.map((resource) => resource.get('id') as string | number))
 
-  return resources.map((resource) => toResourceDto(resource, summaries.get(String(resource.get('id')))))
+  return {
+    items: rows.map((resource) => toResourceDto(resource, summaries.get(String(resource.get('id'))))),
+    pagination: {
+      page,
+      limit,
+      totalItems: count,
+      totalPages: Math.ceil(count / limit)
+    }
+  }
 }
 
 export const getResourceByIdService = async (id: string | number) => {

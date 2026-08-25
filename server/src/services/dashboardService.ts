@@ -1,12 +1,9 @@
 import type { Model, WhereOptions } from 'sequelize'
 import { col, fn, Op, type Order as SequelizeOrder } from 'sequelize'
-import {
-  INCIDENT_STATUS,
-  ORDER_STAGE_STATUS,
-  ORDER_STATUS,
-  RESOURCE_STATUS,
-  RISK_LEVEL
-} from '../constants/databaseConstants.js'
+import { INCIDENT_STATUS } from '../constants/incidentConstants.js'
+import { ORDER_STATUS, RISK_LEVEL } from '../constants/orderConstants.js'
+import { ORDER_STAGE_STATUS } from '../constants/orderStageConstants.js'
+import { RESOURCE_STATUS } from '../constants/resourceConstants.js'
 import { Incident, IncidentAffectedOrder, Order, OrderStage, ProcessTemplate, Resource } from '../models/index.js'
 
 const KANBAN_LIMIT = 8
