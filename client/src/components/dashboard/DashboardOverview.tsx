@@ -29,6 +29,13 @@ const kanbanConfig = [
 const isOverdue = (deadline: string | null, status: string) =>
   Boolean(deadline && status !== 'COMPLETED' && new Date(deadline).getTime() < Date.now())
 
+const getAttentionReason = (order: DashboardOrder) => {
+  if (isOverdue(order.deadline, order.status)) return 'Quá hạn'
+  if (order.status === 'AT_RISK') return 'Đơn rủi ro'
+  if (['HIGH', 'CRITICAL'].includes(order.riskLevel)) return 'Rủi ro cao'
+  return 'Sắp đến hạn'
+}
+
 const formatShortDate = (value: string | null) =>
   formatDate(value, {
     day: '2-digit',
@@ -334,7 +341,7 @@ const AttentionOrders = ({ orders }: { orders: DashboardOrder[] }) => (
               <span
                 className={`shrink-0 rounded-full border px-2 py-1 text-xs font-bold ${getBadgeClass(order.riskLevel)}`}
               >
-                {getRiskLabel(order.riskLevel)}
+                {getAttentionReason(order)}
               </span>
             </div>
           </Link>

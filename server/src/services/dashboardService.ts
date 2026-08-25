@@ -8,6 +8,7 @@ import { Incident, IncidentAffectedOrder, Order, OrderStage, ProcessTemplate, Re
 
 const KANBAN_LIMIT = 8
 const ATTENTION_LIMIT = 6
+const ATTENTION_DUE_SOON_DAYS = 7
 const RECENT_INCIDENT_LIMIT = 6
 const BROKEN_RESOURCE_LIMIT = 6
 
@@ -264,6 +265,10 @@ const getKanbanColumn = async (status: string) => {
 }
 
 const getAttentionOrders = async () => {
+  const now = new Date()
+  const dueSoonThreshold = new Date(now)
+  dueSoonThreshold.setDate(dueSoonThreshold.getDate() + ATTENTION_DUE_SOON_DAYS)
+
   const rows = await Order.findAll({
     where: {
       status: {
@@ -272,7 +277,8 @@ const getAttentionOrders = async () => {
       [Op.or]: [
         { status: ORDER_STATUS.AT_RISK },
         { riskLevel: { [Op.in]: [RISK_LEVEL.HIGH, RISK_LEVEL.CRITICAL] } },
-        { deadline: { [Op.lt]: new Date() } }
+        { deadline: { [Op.lt]: now } },
+        { deadline: { [Op.between]: [now, dueSoonThreshold] } }
       ]
     },
     attributes: [
